@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
     const router = useRouter();
@@ -41,7 +41,7 @@ export default function ProfileScreen() {
                 <Text style={styles.pageTitle}>Profile</Text>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <View style={styles.scrollContent}>
 
                 <View style={styles.profileSection}>
                     <TouchableOpacity style={styles.avatarCircle} activeOpacity={0.7} onPress={pickImage}>
@@ -81,7 +81,7 @@ export default function ProfileScreen() {
                     <Text style={styles.logoutText}>LOGOUT</Text>
                 </TouchableOpacity>
 
-            </ScrollView>
+            </View>
         </SafeAreaView>
     );
 }
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingHorizontal: 24,
-        paddingTop: Platform.OS === 'android' ? 24 : 10,
-        paddingBottom: 24,
+        paddingTop: Platform.OS === 'android' ? 44 : 20,
+        paddingBottom: 20,
     },
     pageTitle: {
         fontSize: 28,
@@ -102,12 +102,13 @@ const styles = StyleSheet.create({
         color: '#172033',
     },
     scrollContent: {
+        flex: 1,
         paddingHorizontal: 24,
-        paddingBottom: 40,
+        paddingBottom: 20,
     },
     profileSection: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 32,
     },
     avatarCircle: {
         width: 88,
@@ -171,8 +172,8 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         borderWidth: 1,
         borderColor: '#E2E8F0',
-        paddingVertical: 8,
-        marginBottom: 32,
+        paddingVertical: 4,
+        marginBottom: 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.02,
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 16,
+        paddingVertical: 14,
         paddingHorizontal: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#F1F5F9',

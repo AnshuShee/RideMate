@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -9,9 +9,8 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-                {/* Header */}
                 <View style={styles.header}>
-                    <View>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
                         <Text style={styles.greeting}>Good morning, Anshu</Text>
                         <Text style={styles.headerTitle}>Where are you going today?</Text>
                     </View>
@@ -20,7 +19,7 @@ export default function HomeScreen() {
                             <Ionicons name="notifications-outline" size={24} color="#172033" />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.profileAvatar} onPress={() => router.push('/(tabs)/profile')}>
-                            <Ionicons name="person" size={20} color="#FFFFFF" />
+                            <Image source={{ uri: 'https://i.pravatar.cc/150?img=11' }} style={{ width: 44, height: 44, borderRadius: 22 }} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -132,7 +131,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 24,
-        paddingTop: Platform.OS === 'android' ? 24 : 10,
+        paddingTop: Platform.OS === 'android' ? 44 : 20,
         paddingBottom: 40,
     },
     header: {
@@ -170,7 +169,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#172033',
+        backgroundColor: '#E2E8F0',
         justifyContent: 'center',
         alignItems: 'center',
     },
