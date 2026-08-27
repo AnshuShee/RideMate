@@ -22,21 +22,29 @@ The application is engineered strictly as a high-fidelity frontend utilizing Rea
 
 ## Project Structure
 
-The codebase utilizes a modular file-based routing architecture:
+The repository is modularized into distinct client and server environments, emphasizing clear separation of concerns:
 
-/app
-  /_layout.tsx          # Root navigation stack configuration
-  /index.jsx            # Authentication entry point
-  /register.jsx         # Account creation interface
-  /offer-ride.jsx       # Form logic to establish new rides
-  /ride-details.jsx     # Comprehensive route and driver details
-  /chat.jsx             # Peer-to-peer messaging layout
-  /(tabs)
-    /_layout.jsx        # Bottom tab navigation configuration
-    /index.jsx          # Primary dashboard
-    /search.jsx         # Search and filter controls
-    /rides.jsx          # Ride history categorization
-    /profile.jsx        # User configuration panel
+```text
+/            
+├── app/                  # Frontend (React Native / Expo Router)
+│   ├── _layout.tsx       # Root navigation stack configuration
+│   ├── index.jsx         # Authentication entry point
+│   ├── register.jsx      # Account creation interface
+│   ├── offer-ride.jsx    # Form logic to establish new rides
+│   ├── ride-details.jsx  # Comprehensive route and driver details
+│   ├── chat.jsx          # Peer-to-peer messaging layout
+│   └── (tabs)/
+│       ├── _layout.jsx   # Bottom tab navigation configuration
+│       ├── index.jsx     # Primary dashboard
+│       ├── search.jsx    # Search and filter controls
+│       ├── rides.jsx     # Ride history categorization
+│       └── profile.jsx   # User configuration panel
+│
+└── backend/              # Backend Services (Node.js)
+    ├── server.js         # Core Express server and API routing logic
+    ├── .env              # Backend environment constraints and keys
+    └── package.json      # Server dependency definitions
+```
 
 ## Getting Started
 
