@@ -1,50 +1,54 @@
-# Welcome to your Expo app 👋
+# RideMate
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+RideMate is a premium, high-performance college ride-sharing application built with React Native and Expo. Designed to connect students with reliable transportation options, the platform facilitates both finding and offering rides through a modern, responsive, and intuitive mobile interface.
 
-## Get started
+## Core Features
 
-1. Install dependencies
+- Modern Authentication Flow: Seamless and clean login and registration interfaces incorporating robust form validations and visual feedbacks.
+- Unified Dashboard: A centralized feed providing quick access to search filters, immediate actions, and dynamically populated nearby ride listings.
+- Ride Discovery: Granular search interface allowing users to find optimal routes, times, and vehicle types.
+- Ride Offering Form: Streamlined process for drivers to post available seats, vehicle details, and route waypoints.
+- Integrated Messaging: In-app communication interface designed with clean chat bubbles to connect drivers with passengers.
+- Profile Management: Comprehensive user profile handling containing ride histories, ratings, and intuitive profile picture manipulation.
 
-   ```bash
+## Technical Architecture
+
+The application is engineered strictly as a high-fidelity frontend utilizing React Native primitives to ensure maximum performance across iOS and Android platforms.
+
+- Framework: React Native with Expo SDK and Expo Router for file-based navigation.
+- Styling: Custom in-house style tokens ensuring a strict adherence to brand guidelines (Royal Blue, Slate Gray) without relying on bloated external CSS frameworks.
+- Image Handling: Expo Image Picker integrated for performant local device image manipulation.
+- Iconography: Vector iconography powered by Ionicons for scalable resolution-independent graphics.
+
+## Project Structure
+
+The codebase utilizes a modular file-based routing architecture:
+
+/app
+  /_layout.tsx          # Root navigation stack configuration
+  /index.jsx            # Authentication entry point
+  /register.jsx         # Account creation interface
+  /offer-ride.jsx       # Form logic to establish new rides
+  /ride-details.jsx     # Comprehensive route and driver details
+  /chat.jsx             # Peer-to-peer messaging layout
+  /(tabs)
+    /_layout.jsx        # Bottom tab navigation configuration
+    /index.jsx          # Primary dashboard
+    /search.jsx         # Search and filter controls
+    /rides.jsx          # Ride history categorization
+    /profile.jsx        # User configuration panel
+
+## Getting Started
+
+To execute the application locally in a development environment:
+
+1. Clone the repository and navigate into the project directory.
+2. Install the necessary dependencies:
    npm install
-   ```
-
-2. Start the app
-
-   ```bash
+3. Start the Expo development server:
    npx expo start
-   ```
+4. Access the application on a physical device using Expo Go or via an iOS/Android simulator.
 
-In the output, you'll find options to open the app in a
+## Design Philosophy
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+The user interface adheres strictly to a premium, minimalistic design language. Complex component libraries were deliberately excluded in favor of standard React Native primitives. This architectural decision guarantees a lightweight application footprint, fluid responsiveness, and transparent view hierarchies.
