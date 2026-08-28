@@ -1,9 +1,53 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_URL } from '../services/api';
 
 export default function RideDetailsScreen() {
     const router = useRouter();
+    const { id } = useLocalSearchParams();
+    const [ride, setRide] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRideDetails = async () => {
+            if (!id) return;
+            try {
+                const response = await fetch(`${API_URL}/rides/${id}`);
+                if (!response.ok) {
+                    throw new Error('Failed to retrieve ride details');
+                }
+                const data = await response.json();
+                setRide(data);
+            } catch (err) {
+                console.error(err);
+                Alert.alert('Error', err.message || 'Unable to connect to server');
+                router.back();
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRideDetails();
+    }, [id]);
+
+    if (loading) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color="#2563EB" />
+            </SafeAreaView>
+        );
+    }
+
+    if (!ride) {
+        return (
+            <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ fontSize: 16, color: '#64748B' }}>Ride details not found.</Text>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -18,38 +62,40 @@ export default function RideDetailsScreen() {
 
                 {/* Route Presentation */}
                 <View style={styles.routeContainer}>
-                    <Text style={styles.cityText}>Ahmedabad</Text>
-                    <Text style={styles.areaText}>University Campus</Text>
+                    <Text style={styles.cityText}>{ride.pickup}</Text>
+                    <Text style={styles.areaText}>Starting Point</Text>
 
                     <View style={styles.arrowBox}>
                         <Ionicons name="arrow-down" size={24} color="#64748B" />
                     </View>
 
-                    <Text style={styles.cityText}>Gandhinagar</Text>
-                    <Text style={styles.areaText}>Sector 21</Text>
+                    <Text style={styles.cityText}>{ride.destination}</Text>
+                    <Text style={styles.areaText}>Ending Destination</Text>
                 </View>
 
                 {/* Date and Time */}
                 <View style={styles.dateTimeContainer}>
-                    <Text style={styles.dateText}>27 August 2026</Text>
-                    <Text style={styles.timeText}>09:00 AM</Text>
+                    <Text style={styles.dateText}>{ride.date}</Text>
+                    <Text style={styles.timeText}>{ride.time}</Text>
                 </View>
 
                 {/* Driver Section */}
-                <Text style={styles.sectionTitle}>Driver</Text>
+                <Text style={styles.sectionTitle}>Driver & Vehicle</Text>
                 <View style={styles.driverCard}>
                     <View style={styles.driverInfo}>
                         <View style={styles.driverAvatar}>
                             <Ionicons name="person-outline" size={24} color="#64748B" />
                         </View>
                         <View style={styles.driverText}>
-                            <Text style={styles.driverName}>Rahul Kumar</Text>
-                            <Text style={styles.driverStats}>★ 4.8  •  24 rides</Text>
+                            <Text style={styles.driverName}>{ride.driver?.name || 'Driver'}</Text>
+                            <Text style={styles.driverStats}>{ride.vehicle} • {ride.driver?.email}</Text>
                         </View>
                     </View>
                 </View>
 
-                <Text style={styles.seatsAvailable}>2 seats available</Text>
+                <Text style={styles.seatsAvailable}>
+                    {ride.availableSeats} {ride.availableSeats === 1 ? 'seat' : 'seats'} available • ₹{ride.price}
+                </Text>
 
                 <View style={styles.buttonGroup}>
                     <TouchableOpacity style={styles.primaryButton}>

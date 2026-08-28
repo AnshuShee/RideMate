@@ -1,9 +1,57 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import CalendarModal from '../../components/CalendarModal';
+import { API_URL } from '../../services/api';
 
 export default function SearchScreen() {
     const router = useRouter();
+
+    const [pickup, setPickup] = useState('');
+    const [destination, setDestination] = useState('');
+    const [date, setDate] = useState('');
+    const [rides, setRides] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+
+    const fetchRides = async (useFilters = true) => {
+        setLoading(true);
+        try {
+            let url = `${API_URL}/rides`;
+            if (useFilters) {
+                const params = [];
+                if (pickup.trim()) params.push(`pickup=${encodeURIComponent(pickup.trim())}`);
+                if (destination.trim()) params.push(`destination=${encodeURIComponent(destination.trim())}`);
+                if (date.trim()) params.push(`date=${encodeURIComponent(date.trim())}`);
+                if (params.length > 0) {
+                    url += `?${params.join('&')}`;
+                }
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch rides');
+            }
+            const data = await response.json();
+            setRides(data);
+        } catch (err) {
+            console.error(err);
+            Alert.alert('Search Failed', 'Unable to retrieve rides from server');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load available rides on mount
+    useEffect(() => {
+        fetchRides(false);
+    }, []);
+
+    const handleSearch = () => {
+        fetchRides(true);
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -23,79 +71,103 @@ export default function SearchScreen() {
                     <View style={styles.fieldBox}>
                         <Text style={styles.fieldLabel}>Pickup</Text>
                         <View style={styles.fieldValueContainer}>
-                            <Text style={styles.fieldValue}>University Campus</Text>
+                            <TextInput
+                                style={{ flex: 1, color: '#172033', fontSize: 15 }}
+                                placeholder="Enter pickup location (e.g. College)"
+                                placeholderTextColor="#64748B"
+                                value={pickup}
+                                onChangeText={setPickup}
+                            />
                         </View>
                     </View>
 
                     <View style={styles.fieldBox}>
                         <Text style={styles.fieldLabel}>Destination</Text>
                         <View style={styles.fieldValueContainer}>
-                            <Text style={styles.fieldValue}>Ahmedabad Railway Station</Text>
+                            <TextInput
+                                style={{ flex: 1, color: '#172033', fontSize: 15 }}
+                                placeholder="Enter destination location"
+                                placeholderTextColor="#64748B"
+                                value={destination}
+                                onChangeText={setDestination}
+                            />
                         </View>
                     </View>
 
                     <View style={styles.rowFields}>
-                        <View style={[styles.fieldBox, { flex: 1, marginRight: 8 }]}>
+                        <TouchableOpacity
+                            style={[styles.fieldBox, { flex: 1 }]}
+                            activeOpacity={0.7}
+                            onPress={() => setShowCalendar(true)}
+                        >
                             <Text style={styles.fieldLabel}>Date</Text>
                             <View style={styles.fieldValueContainer}>
-                                <Text style={styles.fieldValue}>27 Aug</Text>
+                                <TextInput
+                                    style={{ flex: 1, color: '#172033', fontSize: 15 }}
+                                    placeholder="Select date"
+                                    placeholderTextColor="#64748B"
+                                    value={date}
+                                    editable={false}
+                                    pointerEvents="none"
+                                />
                             </View>
-                        </View>
-
-                        <View style={[styles.fieldBox, { flex: 1, marginLeft: 8 }]}>
-                            <Text style={styles.fieldLabel}>Time</Text>
-                            <View style={styles.fieldValueContainer}>
-                                <Text style={styles.fieldValue}>09:00 AM</Text>
-                            </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity style={styles.searchButton}>
-                        <Text style={styles.searchButtonText}>SEARCH RIDES</Text>
+                    <TouchableOpacity
+                        style={[styles.searchButton, loading && { opacity: 0.7 }]}
+                        onPress={handleSearch}
+                        disabled={loading}
+                    >
+                        <Text style={styles.searchButtonText}>{loading ? 'SEARCHING...' : 'SEARCH RIDES'}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <Text style={styles.sectionTitle}>Available Rides</Text>
 
-                {/* Ride Card */}
-                <View style={styles.rideCard}>
-                    <View style={styles.rideRoute}>
-                        <Text style={styles.routeText}>University Campus → Railway Station</Text>
-                    </View>
+                {loading ? (
+                    <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 20 }} />
+                ) : rides.length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: '#64748B', marginTop: 24, fontSize: 15 }}>
+                        No rides matching your search.
+                    </Text>
+                ) : (
+                    rides.map((ride) => (
+                        <View key={ride._id} style={styles.rideCard}>
+                            <View style={styles.rideRoute}>
+                                <Text style={styles.routeText}>{ride.pickup} → {ride.destination}</Text>
+                            </View>
 
-                    <View style={styles.driverInfo}>
-                        <Text style={styles.driverName}>Vikram Singh</Text>
-                        <Text style={styles.ratingText}>★ 4.9</Text>
-                    </View>
+                            <View style={styles.driverInfo}>
+                                <Text style={styles.driverName}>{ride.driver?.name || 'Driver'}</Text>
+                                <Text style={styles.ratingText}>₹{ride.price}</Text>
+                            </View>
 
-                    <Text style={styles.timeText}>09:15 AM</Text>
-                    <Text style={styles.seatsAvailable}>1 seat available</Text>
+                            <Text style={styles.timeText}>{ride.date} • {ride.time}</Text>
+                            <Text style={styles.seatsAvailable}>
+                                {ride.availableSeats} {ride.availableSeats === 1 ? 'seat' : 'seats'} available
+                            </Text>
 
-                    <TouchableOpacity style={styles.viewRideButton} onPress={() => router.push('/ride-details')}>
-                        <Text style={styles.viewRideText}>VIEW RIDE →</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Second Ride Card */}
-                <View style={styles.rideCard}>
-                    <View style={styles.rideRoute}>
-                        <Text style={styles.routeText}>University Campus → Railway Station</Text>
-                    </View>
-
-                    <View style={styles.driverInfo}>
-                        <Text style={styles.driverName}>Anjali Desai</Text>
-                        <Text style={styles.ratingText}>★ 4.7</Text>
-                    </View>
-
-                    <Text style={styles.timeText}>09:45 AM</Text>
-                    <Text style={styles.seatsAvailable}>3 seats available</Text>
-
-                    <TouchableOpacity style={styles.viewRideButton} onPress={() => router.push('/ride-details')}>
-                        <Text style={styles.viewRideText}>VIEW RIDE →</Text>
-                    </TouchableOpacity>
-                </View>
+                            <TouchableOpacity
+                                style={styles.viewRideButton}
+                                onPress={() => router.push({
+                                    pathname: '/ride-details',
+                                    params: { id: ride._id }
+                                })}
+                            >
+                                <Text style={styles.viewRideText}>VIEW RIDE →</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
 
             </ScrollView>
+
+            <CalendarModal
+                visible={showCalendar}
+                onClose={() => setShowCalendar(false)}
+                onSelectDate={setDate}
+            />
         </SafeAreaView>
     );
 }

@@ -1,9 +1,89 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import CalendarModal from '../components/CalendarModal';
+import { API_URL } from '../services/api';
+import { getAuthToken } from '../utils/auth';
 
 export default function OfferRideScreen() {
     const router = useRouter();
+
+    const [pickup, setPickup] = useState('');
+    const [destination, setDestination] = useState('');
+    const [date, setDate] = useState('');
+    const [time, setTime] = useState('');
+    const [seats, setSeats] = useState('');
+    const [price, setPrice] = useState('');
+    const [vehicle, setVehicle] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+
+    const handleOfferRide = async () => {
+        // Validation
+        if (!pickup.trim() || !destination.trim() || !date.trim() || !time.trim() || !seats.trim() || !price.trim() || !vehicle.trim()) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        const seatsNum = Number(seats);
+        if (isNaN(seatsNum) || seatsNum <= 0) {
+            Alert.alert('Error', 'Available seats must be greater than 0');
+            return;
+        }
+
+        const priceNum = Number(price);
+        if (isNaN(priceNum) || priceNum < 0) {
+            Alert.alert('Error', 'Price cannot be negative');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const token = await getAuthToken();
+            if (!token) {
+                Alert.alert('Error', 'Authentication token not found. Please log in again.');
+                router.replace('/');
+                return;
+            }
+
+            const response = await fetch(`${API_URL}/rides`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    pickup: pickup.trim(),
+                    destination: destination.trim(),
+                    date: date.trim(),
+                    time: time.trim(),
+                    availableSeats: seatsNum,
+                    price: priceNum,
+                    vehicle: vehicle.trim()
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create ride');
+            }
+
+            Alert.alert('Success', 'Ride created successfully', [
+                {
+                    text: 'OK',
+                    onPress: () => router.replace('/(tabs)')
+                }
+            ]);
+        } catch (err) {
+            console.error(err);
+            Alert.alert('Offer Ride Failed', err.message || 'Unable to connect to server');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -23,7 +103,13 @@ export default function OfferRideScreen() {
                         <Text style={styles.label}>Pickup Location</Text>
                         <View style={styles.inputWrapper}>
                             <Ionicons name="location-outline" size={22} color="#64748B" style={styles.icon} />
-                            <TextInput style={styles.input} placeholder="Where are you starting?" placeholderTextColor="#64748B" />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Where are you starting?"
+                                placeholderTextColor="#64748B"
+                                value={pickup}
+                                onChangeText={setPickup}
+                            />
                         </View>
                     </View>
 
@@ -31,23 +117,46 @@ export default function OfferRideScreen() {
                         <Text style={styles.label}>Destination</Text>
                         <View style={styles.inputWrapper}>
                             <Ionicons name="flag-outline" size={22} color="#64748B" style={styles.icon} />
-                            <TextInput style={styles.input} placeholder="Where are you going?" placeholderTextColor="#64748B" />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Where are you going?"
+                                placeholderTextColor="#64748B"
+                                value={destination}
+                                onChangeText={setDestination}
+                            />
                         </View>
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Date</Text>
-                        <View style={styles.inputWrapper}>
+                        <TouchableOpacity
+                            style={styles.inputWrapper}
+                            activeOpacity={0.7}
+                            onPress={() => setShowCalendar(true)}
+                        >
                             <Ionicons name="calendar-outline" size={22} color="#64748B" style={styles.icon} />
-                            <TextInput style={styles.input} placeholder="Select date" placeholderTextColor="#64748B" />
-                        </View>
+                            <TextInput
+                                style={[styles.input, { color: '#172033' }]}
+                                placeholder="Select date"
+                                placeholderTextColor="#64748B"
+                                value={date}
+                                editable={false}
+                                pointerEvents="none"
+                            />
+                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.label}>Departure Time</Text>
                         <View style={styles.inputWrapper}>
                             <Ionicons name="time-outline" size={22} color="#64748B" style={styles.icon} />
-                            <TextInput style={styles.input} placeholder="Select time" placeholderTextColor="#64748B" />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Select time (e.g. 09:00)"
+                                placeholderTextColor="#64748B"
+                                value={time}
+                                onChangeText={setTime}
+                            />
                         </View>
                     </View>
 
@@ -55,16 +164,62 @@ export default function OfferRideScreen() {
                         <Text style={styles.label}>Available Seats</Text>
                         <View style={styles.inputWrapper}>
                             <Ionicons name="people-outline" size={22} color="#64748B" style={styles.icon} />
-                            <TextInput style={styles.input} placeholder="How many seats?" keyboardType="numeric" placeholderTextColor="#64748B" />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="How many seats?"
+                                keyboardType="numeric"
+                                placeholderTextColor="#64748B"
+                                value={seats}
+                                onChangeText={setSeats}
+                            />
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.offerButton} onPress={() => router.back()}>
-                        <Text style={styles.offerButtonText}>OFFER RIDE</Text>
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Price (per seat)</Text>
+                        <View style={styles.inputWrapper}>
+                            <Ionicons name="cash-outline" size={22} color="#64748B" style={styles.icon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Price in ₹"
+                                keyboardType="numeric"
+                                placeholderTextColor="#64748B"
+                                value={price}
+                                onChangeText={setPrice}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Vehicle Details</Text>
+                        <View style={styles.inputWrapper}>
+                            <Ionicons name="car-outline" size={22} color="#64748B" style={styles.icon} />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="e.g. Honda City"
+                                placeholderTextColor="#64748B"
+                                value={vehicle}
+                                onChangeText={setVehicle}
+                            />
+                        </View>
+                    </View>
+
+                    <TouchableOpacity
+                        style={[styles.offerButton, loading && { opacity: 0.7 }]}
+                        onPress={handleOfferRide}
+                        disabled={loading}
+                    >
+                        <Text style={styles.offerButtonText}>{loading ? 'Creating ride...' : 'OFFER RIDE'}</Text>
                     </TouchableOpacity>
                 </View>
 
             </ScrollView>
+
+            <CalendarModal
+                visible={showCalendar}
+                onClose={() => setShowCalendar(false)}
+                onSelectDate={setDate}
+            />
         </SafeAreaView>
     );
 }
