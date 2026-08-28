@@ -1,28 +1,58 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Image, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { clearUserDetails, deleteAuthToken, getUserDetails } from '../../utils/auth';
 
 export default function ProfileScreen() {
     const router = useRouter();
-
-    const handleLogout = () => {
-        router.push('/');
-    };
-
+    const [userName, setUserName] = useState('');
     const [profileImage, setProfileImage] = useState(null);
+
+    useEffect(() => {
+        const loadUser = async () => {
+            try {
+                const user = await getUserDetails();
+                if (user && user.name) {
+                    setUserName(user.name);
+                }
+                const savedImage = await AsyncStorage.getItem('profile_image');
+                if (savedImage) {
+                    setProfileImage(savedImage);
+                }
+            } catch (err) {
+                console.log('Error loading user:', err);
+            }
+        };
+        loadUser();
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            await deleteAuthToken();
+            await clearUserDetails();
+            await AsyncStorage.removeItem('profile_image');
+        } catch (err) {
+            console.log('Error clearing storage on logout:', err);
+        }
+        router.replace('/');
+    };
 
     const pickImage = async () => {
         let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaType.Images,
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.5,
         });
 
         if (!result.canceled) {
-            setProfileImage(result.assets[0].uri);
+            const uri = result.assets[0].uri;
+            setProfileImage(uri);
+            await AsyncStorage.setItem('profile_image', uri);
         }
     };
 
@@ -55,14 +85,7 @@ export default function ProfileScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <Text style={styles.userName}>Anshu Shee</Text>
-                    <Text style={styles.userRating}>★ 4.8</Text>
-
-                    <View style={styles.statsRow}>
-                        <Text style={styles.statText}>24 Rides</Text>
-                        <View style={styles.statDot} />
-                        <Text style={styles.statText}>16 Driver</Text>
-                    </View>
+                    {userName ? <Text style={styles.userName}>{userName}</Text> : null}
                 </View>
 
                 <View style={styles.menuCard}>

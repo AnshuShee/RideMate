@@ -1,16 +1,69 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_URL } from '../services/api';
+import { getAuthToken, saveUserDetails, setAuthToken } from '../utils/auth';
 
 export default function LoginScreen() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const handleLogin = () => {
-        router.replace('/(tabs)');
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const token = await getAuthToken();
+                if (token) {
+                    router.replace('/(tabs)');
+                }
+            } catch (err) {
+                console.log('Error checking token:', err);
+            }
+        };
+        checkAuth();
+    }, []);
+
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) {
+            Alert.alert('Error', 'Please enter your email and password');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    password: password,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Invalid email or password');
+            }
+
+            // Save user data & token using SecureStore and AsyncStorage
+            await setAuthToken(data.token);
+            if (data.user) {
+                await saveUserDetails(data.user);
+            }
+
+            router.replace('/(tabs)');
+        } catch (error) {
+            Alert.alert('Login Failed', error.message || 'Unable to connect to server');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -65,9 +118,9 @@ export default function LoginScreen() {
                         <Text style={styles.forgotText}>Forgot Password?</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                        <Text style={styles.loginButtonText}>LOGIN</Text>
-                        <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                    <TouchableOpacity style={[styles.loginButton, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading}>
+                        <Text style={styles.loginButtonText}>{loading ? 'LOGGING IN...' : 'LOGIN'}</Text>
+                        {!loading && <Ionicons name="arrow-forward" size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />}
                     </TouchableOpacity>
 
                     <View style={styles.footer}>

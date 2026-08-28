@@ -1,9 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_URL } from '../../services/api';
+import { getUserDetails } from '../../utils/auth';
 
 export default function HomeScreen() {
     const router = useRouter();
+    const [userName, setUserName] = useState('');
+    const [profileImage, setProfileImage] = useState(null);
+    const [rides, setRides] = useState([]);
+    const isFocused = useIsFocused();
+
+    useEffect(() => {
+        if (isFocused) {
+            const loadUserAndRides = async () => {
+                try {
+                    const user = await getUserDetails();
+                    if (user && user.name) {
+                        const firstName = user.name.split(' ')[0];
+                        setUserName(firstName);
+                    }
+                    const savedImage = await AsyncStorage.getItem('profile_image');
+                    setProfileImage(savedImage);
+
+                    // Fetch upcoming rides
+                    const response = await fetch(`${API_URL}/rides`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setRides(data);
+                    }
+                } catch (err) {
+                    console.log('Error loading dashboard data:', err);
+                }
+            };
+            loadUserAndRides();
+        }
+    }, [isFocused]);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -11,7 +47,7 @@ export default function HomeScreen() {
 
                 <View style={styles.header}>
                     <View style={{ flex: 1, paddingRight: 12 }}>
-                        <Text style={styles.greeting}>Good morning, Anshu</Text>
+                        <Text style={styles.greeting}>Good morning{userName ? `, ${userName}` : ''}</Text>
                         <Text style={styles.headerTitle}>Where are you going today?</Text>
                     </View>
                     <View style={styles.headerIcons}>
@@ -19,7 +55,10 @@ export default function HomeScreen() {
                             <Ionicons name="notifications-outline" size={24} color="#172033" />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.profileAvatar} onPress={() => router.push('/(tabs)/profile')}>
-                            <Image source={{ uri: 'https://i.pravatar.cc/150?img=11' }} style={{ width: 44, height: 44, borderRadius: 22 }} />
+                            <Image
+                                source={profileImage ? { uri: profileImage } : { uri: 'https://i.pravatar.cc/150?img=11' }}
+                                style={{ width: 44, height: 44, borderRadius: 22 }}
+                            />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -89,35 +128,52 @@ export default function HomeScreen() {
                 {/* Nearby Rides */}
                 <Text style={styles.sectionTitle}>Nearby Rides</Text>
 
-                <View style={styles.rideCard}>
-                    <View style={styles.rideRoute}>
-                        <View style={styles.routeLocations}>
-                            <Text style={styles.cityText}>Ahmedabad</Text>
-                            <Text style={styles.areaText}>University Campus</Text>
+                {rides.length === 0 ? (
+                    <Text style={{ color: '#64748B', fontSize: 14, marginVertical: 12, textAlign: 'center' }}>
+                        No upcoming rides available at this moment.
+                    </Text>
+                ) : (
+                    rides.slice(0, 3).map((ride) => (
+                        <View key={ride._id} style={styles.rideCard}>
+                            <View style={styles.rideRoute}>
+                                <View style={styles.routeLocations}>
+                                    <Text style={styles.cityText}>{ride.pickup}</Text>
+                                    <Text style={styles.areaText}>Starting Point</Text>
 
-                            <View style={styles.arrowContainer}>
-                                <Ionicons name="arrow-down" size={20} color="#64748B" />
+                                    <View style={styles.arrowContainer}>
+                                        <Ionicons name="arrow-down" size={20} color="#64748B" />
+                                    </View>
+
+                                    <Text style={styles.cityText}>{ride.destination}</Text>
+                                    <Text style={styles.areaText}>Ending Destination</Text>
+                                </View>
                             </View>
 
-                            <Text style={styles.cityText}>Gandhinagar</Text>
-                            <Text style={styles.areaText}>Sector 21</Text>
-                        </View>
-                    </View>
+                            <View style={styles.driverInfo}>
+                                <View style={styles.driverRow}>
+                                    <Text style={styles.driverName}>{ride.driver?.name || 'Driver'}</Text>
+                                    <Text style={styles.ratingText}>₹{ride.price}</Text>
+                                </View>
+                                <Text style={styles.timeText}>{ride.date} • {ride.time}</Text>
+                                <Text style={styles.seatsAvailable}>
+                                    {ride.availableSeats} {ride.availableSeats === 1 ? 'seat' : 'seats'} available
+                                </Text>
+                            </View>
 
-                    <View style={styles.driverInfo}>
-                        <View style={styles.driverRow}>
-                            <Text style={styles.driverName}>Rahul Kumar</Text>
-                            <Text style={styles.ratingText}>★ 4.8</Text>
+                            <TouchableOpacity
+                                style={styles.viewRideButton}
+                                onPress={() => router.push({
+                                    pathname: '/ride-details',
+                                    params: { id: ride._id }
+                                })}
+                            >
+                                <Text style={styles.viewRideText}>VIEW RIDE</Text>
+                                <Ionicons name="arrow-forward" size={16} color="#2563EB" style={{ marginLeft: 4 }} />
+                            </TouchableOpacity>
                         </View>
-                        <Text style={styles.timeText}>09:00 AM</Text>
-                        <Text style={styles.seatsAvailable}>2 seats available</Text>
-                    </View>
+                    ))
+                )}
 
-                    <TouchableOpacity style={styles.viewRideButton} onPress={() => router.push('/ride-details')}>
-                        <Text style={styles.viewRideText}>VIEW RIDE</Text>
-                        <Ionicons name="arrow-forward" size={16} color="#2563EB" style={{ marginLeft: 4 }} />
-                    </TouchableOpacity>
-                </View>
 
             </ScrollView>
         </SafeAreaView>
