@@ -13,6 +13,9 @@ export default function LoginScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    // Only check for an existing session when the app first loads.
+    // Using useEffect (not useFocusEffect) so this does NOT re-run
+    // after logout — which would bounce the user back to Dashboard.
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -25,7 +28,7 @@ export default function LoginScreen() {
             }
         };
         checkAuth();
-    }, []);
+    }, []); // empty array = run once on mount only
 
     const handleLogin = async () => {
         if (!email.trim() || !password.trim()) {

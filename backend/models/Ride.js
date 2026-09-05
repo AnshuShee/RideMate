@@ -1,20 +1,28 @@
 const mongoose = require('mongoose');
 
+// Location sub-schema: stores name, latitude, longitude
+const locationSchema = new mongoose.Schema({
+    name: { type: String, default: '' },
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
+}, { _id: false });
+
 const rideSchema = new mongoose.Schema({
     driver: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
+    // pickup and destination now support both:
+    //  - old format (plain string) via the `name` field
+    //  - new format with latitude + longitude
     pickup: {
-        type: String,
-        required: true,
-        trim: true
+        type: locationSchema,
+        required: true
     },
     destination: {
-        type: String,
-        required: true,
-        trim: true
+        type: locationSchema,
+        required: true
     },
     date: {
         type: String,
@@ -38,14 +46,18 @@ const rideSchema = new mongoose.Schema({
     },
     vehicle: {
         type: String,
-        required: true,
-        trim: true
+        trim: true,
+        default: 'Standard'
     },
     status: {
         type: String,
-        enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
+        enum: ['upcoming', 'started', 'completed', 'cancelled'],
         default: 'upcoming'
-    }
+    },
+    passengers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, {
     timestamps: true
 });

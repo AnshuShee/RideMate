@@ -1,12 +1,106 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_URL } from '../../services/api';
+import { getAuthToken, getUserDetails } from '../../utils/auth';
 
 export default function MyRidesScreen() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('upcoming');
+    const [rides, setRides] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchMyRides = async () => {
+                setLoading(true);
+                try {
+                    const token = await getAuthToken();
+                    const user = await getUserDetails();
+                    if (user && user.id) {
+                        setCurrentUserId(user.id);
+                    }
+
+                    const response = await fetch(`${API_URL}/rides/my-rides`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setRides(data);
+                    }
+                } catch (err) {
+                    console.error('Error fetching my rides:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchMyRides();
+        }, [])
+    );
+
+    const upcomingRides = rides.filter(r => r.status === 'upcoming' || r.status === 'started');
+    const completedRides = rides.filter(r => r.status === 'completed' || r.status === 'cancelled');
+
+    const locationStr = (loc) => {
+        if (!loc) return '—';
+        if (typeof loc === 'string') return loc;
+        return loc.name || `${loc.latitude?.toFixed(4)}, ${loc.longitude?.toFixed(4)}`;
+    };
+
+    const renderRides = (rideList) => {
+        if (rideList.length === 0) {
+            return (
+                <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                    <Text style={{ color: '#64748B', fontSize: 16 }}>
+                        {activeTab === 'upcoming' ? 'No upcoming rides' : 'No completed rides'}
+                    </Text>
+                </View>
+            );
+        }
+
+        return rideList.map(ride => {
+            const userIdStr = currentUserId ? currentUserId.toString() : null;
+            const isDriver = ride.driver?._id?.toString() === userIdStr || ride.driver?.toString() === userIdStr;
+
+            return (
+                <View key={ride._id} style={[styles.rideCard, activeTab === 'completed' && { borderColor: '#E2E8F0', opacity: 0.8 }]}>
+                    <View style={styles.routeHeader}>
+                        <Text style={styles.routeText}>{locationStr(ride.pickup)} → {locationStr(ride.destination)}</Text>
+                    </View>
+
+                    <Text style={styles.dateTimeText}>{ride.date} • {ride.time}</Text>
+
+                    <View style={styles.passengersRow}>
+                        <Text style={styles.passengerText}>{isDriver ? "Driver" : "Passenger"}</Text>
+                        <Text style={styles.passengerText}>₹{ride.price} • {ride.availableSeats} Seats left</Text>
+                    </View>
+
+                    {activeTab === 'upcoming' && !isDriver && (
+                        <View style={{ marginBottom: 12 }}>
+                            <Text style={{ color: '#16A34A', fontWeight: 'bold' }}>JOINED</Text>
+                        </View>
+                    )}
+
+                    {activeTab === 'completed' && (
+                        <View style={{ marginBottom: 12 }}>
+                            <Text style={{ color: ride.status === 'cancelled' ? '#DC2626' : '#16A34A', fontWeight: 'bold' }}>
+                                {ride.status.toUpperCase()}
+                            </Text>
+                        </View>
+                    )}
+
+                    <TouchableOpacity style={styles.viewRideButton} onPress={() => router.push(`/ride-details?id=${ride._id}`)}>
+                        <Text style={styles.viewRideText}>VIEW DETAILS →</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        });
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -30,49 +124,11 @@ export default function MyRidesScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-
-                {activeTab === 'upcoming' ? (
-                    <>
-                        <View style={styles.rideCard}>
-                            <View style={styles.routeHeader}>
-                                <Text style={styles.routeText}>Ahmedabad → Gandhinagar</Text>
-                            </View>
-
-                            <Text style={styles.dateTimeText}>27 Aug • 09:00 AM</Text>
-
-                            <View style={styles.passengersRow}>
-                                <Text style={styles.passengerText}>Driver</Text>
-                                <Text style={styles.passengerText}>3 Passengers</Text>
-                            </View>
-
-                            <TouchableOpacity style={styles.viewRideButton} onPress={() => router.push('/ride-details')}>
-                                <Text style={styles.viewRideText}>VIEW RIDE →</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </>
+                {loading ? (
+                    <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
                 ) : (
-                    <>
-                        <View style={[styles.rideCard, { borderColor: '#E2E8F0' }]}>
-                            <View style={styles.routeHeader}>
-                                <Text style={styles.routeText}>Gandhinagar → Ahmedabad</Text>
-                            </View>
-
-                            <View style={styles.completedRow}>
-                                <Text style={styles.dateTimeText}>25 Aug • </Text>
-                                <Text style={styles.completedText}>Completed</Text>
-                            </View>
-
-                            <View style={styles.starsRow}>
-                                <Ionicons name="star" size={20} color="#F59E0B" />
-                                <Ionicons name="star" size={20} color="#F59E0B" />
-                                <Ionicons name="star" size={20} color="#F59E0B" />
-                                <Ionicons name="star" size={20} color="#F59E0B" />
-                                <Ionicons name="star" size={20} color="#F59E0B" />
-                            </View>
-                        </View>
-                    </>
+                    renderRides(activeTab === 'upcoming' ? upcomingRides : completedRides)
                 )}
-
             </ScrollView>
         </SafeAreaView>
     );

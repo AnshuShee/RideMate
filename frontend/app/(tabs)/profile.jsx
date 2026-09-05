@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { clearUserDetails, deleteAuthToken, getUserDetails } from '../../utils/auth';
+import { clearAllAuthData, getUserDetails } from '../../utils/auth';
+
 
 export default function ProfileScreen() {
     const router = useRouter();
+    const [loggedOut, setLoggedOut] = useState(false);
     const [userName, setUserName] = useState('');
     const [profileImage, setProfileImage] = useState(null);
 
+    // ALL hooks must be called before any early return (React rules)
     useEffect(() => {
         const loadUser = async () => {
             try {
@@ -30,20 +33,48 @@ export default function ProfileScreen() {
         loadUser();
     }, []);
 
-    const handleLogout = async () => {
-        try {
-            await deleteAuthToken();
-            await clearUserDetails();
-            await AsyncStorage.removeItem('profile_image');
-        } catch (err) {
-            console.log('Error clearing storage on logout:', err);
-        }
-        router.replace('/');
+    const handleLogout = () => {
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await clearAllAuthData();
+                        setLoggedOut(true);   // triggers <Redirect> below
+                    },
+                },
+            ]
+        );
     };
 
+    // Early return AFTER all hooks — when loggedOut=true, Expo Router
+    // handles the redirect at framework level (bypasses tab navigator)
+    if (loggedOut) {
+        return <Redirect href="/" />;
+    }
+
+
     const pickImage = async () => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaType.Images,
+        // Step 1: Request permission to access the photo library
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert(
+                'Permission Required',
+                'Please allow access to your photo library to set a profile picture.',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        // Step 2: Open the image picker
+        // NOTE: expo-image-picker v17 removed the MediaType enum.
+        //       Use the plain string 'images' instead.
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: 'images',   // ✅ correct for expo-image-picker v17+
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.5,
@@ -55,6 +86,7 @@ export default function ProfileScreen() {
             await AsyncStorage.setItem('profile_image', uri);
         }
     };
+
 
     const menuItems = [
         { title: 'Personal Information', icon: 'person-outline' },
@@ -71,7 +103,7 @@ export default function ProfileScreen() {
                 <Text style={styles.pageTitle}>Profile</Text>
             </View>
 
-            <View style={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 <View style={styles.profileSection}>
                     <TouchableOpacity style={styles.avatarCircle} activeOpacity={0.7} onPress={pickImage}>
@@ -104,7 +136,18 @@ export default function ProfileScreen() {
                     <Text style={styles.logoutText}>LOGOUT</Text>
                 </TouchableOpacity>
 
-            </View>
+                <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={async () => {
+                        await clearAllAuthData();
+                        setLoggedOut(true);
+                    }}
+                >
+                    <Ionicons name="log-in-outline" size={20} color="#2563EB" style={{ marginRight: 8 }} />
+                    <Text style={styles.loginText}>Go to Login</Text>
+                </TouchableOpacity>
+
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -125,9 +168,8 @@ const styles = StyleSheet.create({
         color: '#172033',
     },
     scrollContent: {
-        flex: 1,
         paddingHorizontal: 24,
-        paddingBottom: 20,
+        paddingBottom: 40,
     },
     profileSection: {
         alignItems: 'center',
@@ -234,9 +276,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#FECACA',
+        marginBottom: 12,
     },
     logoutText: {
         color: '#DC2626',
+        fontSize: 16,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
+    loginButton: {
+        height: 56,
+        borderRadius: 16,
+        backgroundColor: '#EFF6FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'row',
+        borderWidth: 1,
+        borderColor: '#BFDBFE',
+    },
+    loginText: {
+        color: '#2563EB',
         fontSize: 16,
         fontWeight: 'bold',
         letterSpacing: 0.5,

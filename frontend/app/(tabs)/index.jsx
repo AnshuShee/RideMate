@@ -6,13 +6,14 @@ import { useEffect, useState } from 'react';
 import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_URL } from '../../services/api';
-import { getUserDetails } from '../../utils/auth';
+import { getAuthToken, getUserDetails } from '../../utils/auth';
 
 export default function HomeScreen() {
     const router = useRouter();
     const [userName, setUserName] = useState('');
     const [profileImage, setProfileImage] = useState(null);
     const [rides, setRides] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const isFocused = useIsFocused();
 
     useEffect(() => {
@@ -33,6 +34,18 @@ export default function HomeScreen() {
                         const data = await response.json();
                         setRides(data);
                     }
+
+                    // Fetch unread notifications count
+                    const token = await getAuthToken();
+                    if (token) {
+                        const notifRes = await fetch(`${API_URL}/notifications/unread-count`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (notifRes.ok) {
+                            const notifData = await notifRes.json();
+                            setUnreadCount(notifData.unreadCount || 0);
+                        }
+                    }
                 } catch (err) {
                     console.log('Error loading dashboard data:', err);
                 }
@@ -40,6 +53,12 @@ export default function HomeScreen() {
             loadUserAndRides();
         }
     }, [isFocused]);
+
+    const locationStr = (loc) => {
+        if (!loc) return '—';
+        if (typeof loc === 'string') return loc;
+        return loc.name || `${loc.latitude?.toFixed(4)}, ${loc.longitude?.toFixed(4)}`;
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -51,14 +70,23 @@ export default function HomeScreen() {
                         <Text style={styles.headerTitle}>Where are you going today?</Text>
                     </View>
                     <View style={styles.headerIcons}>
-                        <TouchableOpacity style={styles.iconButton}>
+                        <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notifications')}>
                             <Ionicons name="notifications-outline" size={24} color="#172033" />
+                            {unreadCount > 0 && (
+                                <View style={styles.badgeContainer}>
+                                    <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                </View>
+                            )}
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.profileAvatar} onPress={() => router.push('/(tabs)/profile')}>
-                            <Image
-                                source={profileImage ? { uri: profileImage } : { uri: 'https://i.pravatar.cc/150?img=11' }}
-                                style={{ width: 44, height: 44, borderRadius: 22 }}
-                            />
+                            {profileImage ? (
+                                <Image
+                                    source={{ uri: profileImage }}
+                                    style={{ width: 44, height: 44, borderRadius: 22 }}
+                                />
+                            ) : (
+                                <Ionicons name="person" size={20} color="#64748B" />
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -137,14 +165,14 @@ export default function HomeScreen() {
                         <View key={ride._id} style={styles.rideCard}>
                             <View style={styles.rideRoute}>
                                 <View style={styles.routeLocations}>
-                                    <Text style={styles.cityText}>{ride.pickup}</Text>
+                                    <Text style={styles.cityText}>{locationStr(ride.pickup)}</Text>
                                     <Text style={styles.areaText}>Starting Point</Text>
 
                                     <View style={styles.arrowContainer}>
                                         <Ionicons name="arrow-down" size={20} color="#64748B" />
                                     </View>
 
-                                    <Text style={styles.cityText}>{ride.destination}</Text>
+                                    <Text style={styles.cityText}>{locationStr(ride.destination)}</Text>
                                     <Text style={styles.areaText}>Ending Destination</Text>
                                 </View>
                             </View>
@@ -220,6 +248,26 @@ const styles = StyleSheet.create({
         marginRight: 12,
         borderWidth: 1,
         borderColor: '#E2E8F0',
+        position: 'relative',
+    },
+    badgeContainer: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#DC2626',
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+    },
+    badgeText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
     profileAvatar: {
         width: 44,

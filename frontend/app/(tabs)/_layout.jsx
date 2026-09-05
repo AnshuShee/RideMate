@@ -1,7 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
+    const insets = useSafeAreaInsets();
+    const bottomInset = insets.bottom; // e.g. 34 on iPhone X+, 0 on older iPhones/Android
+
     return (
         <Tabs
             screenOptions={{
@@ -12,8 +16,8 @@ export default function TabLayout() {
                     backgroundColor: '#FFFFFF',
                     borderTopWidth: 1,
                     borderTopColor: '#E2E8F0',
-                    height: 65,
-                    paddingBottom: 10,
+                    height: 72 + bottomInset,          // taller bar gives more breathing room
+                    paddingBottom: bottomInset + 12,   // extra 12 above home indicator pushes content up
                     paddingTop: 10,
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: -4 },
@@ -24,7 +28,7 @@ export default function TabLayout() {
                 tabBarLabelStyle: {
                     fontSize: 12,
                     fontWeight: '600',
-                    marginTop: 4,
+                    marginTop: 2,
                 },
             }}>
             <Tabs.Screen
